@@ -1,0 +1,233 @@
+
+import java.text.DecimalFormat;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Scanner;
+import java.util.Stack;
+
+public class Rpncalculator
+{
+
+    static final HashMap<String, Integer> prec;
+
+    static
+    {
+        prec = new HashMap<>();
+        prec.put("^", 3);
+        prec.put("%", 2);
+        prec.put("*", 2);
+        prec.put("/", 2);
+        prec.put("+", 1);
+        prec.put("-", 1);
+    }
+
+    public static void main(String[] args)
+    {
+
+        Queue<String> infixQueue = new LinkedList<>();
+        Scanner sc = new Scanner(System.in);
+        Character inf, infNext = ' ';
+        String entrada;
+        String digitos = "";
+        do
+        {
+            System.out.println("Coloque a expressão infixa ou 'quit' para sair ");
+            entrada = sc.nextLine();
+            entrada = entrada.replaceAll(" ", "");
+            if (entrada.equals("quit"))
+            {
+                System.exit(0);
+            }
+
+            for (int i = 0; i < entrada.length(); i++)
+            {
+            	inf = entrada.charAt(i);
+                if (i + 1 < entrada.length())
+                {
+                	infNext = entrada.charAt(i + 1);
+                }
+
+                if (inf.equals('(') || inf.equals(')'))
+                {
+                    if (inf.equals('(') && infNext.equals('-'))
+                    {
+                        System.out.println("Números negativos não são permitidos");
+                        main(args);
+                    } else
+                    {
+                        infixQueue.add(inf.toString());
+                    }
+                } else if (!Character.isDigit(inf))
+                {
+                    if (infixQueue.isEmpty() && inf.equals('-'))
+                    {
+                        System.out.println("Números negativos não são permitidos");
+                        main(args);
+                    } else if (infNext.equals('-'))
+                    {
+                        System.out.println("Números negativos não são permitidos");
+                        main(args);
+                    } else
+                    {
+                        infixQueue.add(inf.toString());
+                    }
+                } else if (Character.isDigit(inf))
+                {
+                    if (i + 1 < entrada.length() && entrada.charAt(i + 1) == '.')
+                    {
+                        int j = i + 1;
+                        digitos = inf.toString() + entrada.charAt(j);
+                        while (j + 1 <= entrada.length() - 1 && Character.isDigit(entrada.charAt(j + 1)))
+                        {
+                        	digitos = digitos + entrada.charAt(j + 1);
+                            j++;
+                        }
+                        i = j;
+                        infixQueue.add(digitos);
+                        digitos = "";
+                    } else if (i + 1 <= entrada.length() - 1 && Character.isDigit(entrada.charAt(i + 1)))
+                    {
+                        int j = i;
+                       
+                        while (j <= entrada.length() - 1 && Character.isDigit(entrada.charAt(j)))
+                        {
+                        	digitos = digitos + entrada.charAt(j);
+                            j++;
+                        }
+                        i = j - 1;
+                        infixQueue.add(digitos);
+                        digitos = "";
+                    } else
+                    {
+                        infixQueue.add(inf.toString());
+                    }
+
+                }
+            }
+
+            infixToPostfix(infixQueue);
+        } while (!entrada.equals("quit"));
+    }
+
+    
+    public static void infixToPostfix(Queue<String> infixQueue)
+    {
+        Stack operatorStack = new Stack();
+        Queue<String> postQueue = new LinkedList<>();
+        String t;
+        while (!infixQueue.isEmpty())
+        {
+            t = infixQueue.poll();
+            try
+            {
+                double num = Double.parseDouble(t);
+                postQueue.add(t);
+            } catch (NumberFormatException nfe)
+            {
+                if (operatorStack.isEmpty())
+                {
+                    operatorStack.add(t);
+                } else if (t.equals("("))
+                {
+                    operatorStack.add(t);
+                } else if (t.equals(")"))
+                {
+                    while (!operatorStack.peek().toString().equals("("))
+                    {
+                        postQueue.add(operatorStack.peek().toString());
+                        operatorStack.pop();
+                    }
+                    operatorStack.pop();
+                } else
+                {
+                    while (!operatorStack.empty() && !operatorStack.peek().toString().equals("(") && prec.get(t) <= prec.get(operatorStack.peek().toString()))
+                    {
+                        postQueue.add(operatorStack.peek().toString());
+                        operatorStack.pop();
+                    }
+                    operatorStack.push(t);
+                }
+            }
+        }
+        while (!operatorStack.empty())
+        {
+            postQueue.add(operatorStack.peek().toString());
+            operatorStack.pop();
+        }
+        System.out.println();
+        System.out.println("Expressão posfixa --> ");
+        
+        for (String val : postQueue)
+        {
+            System.out.print(val + " ");
+        }
+        postfixEvaluation(postQueue);
+    }
+
+    
+    public static void postfixEvaluation(Queue<String> postQueue)
+    {
+        Stack<String> eval = new Stack<>();
+        String nmr;
+        Double nmrPrincipal, proxNmr, resultado = 0.0;
+        while (!postQueue.isEmpty())
+        {
+        	nmr = postQueue.poll();
+            try
+            {
+                double num = Double.parseDouble(nmr);
+                eval.add(nmr);
+            } catch (NumberFormatException nfe)
+            {
+            	nmrPrincipal = Double.parseDouble(eval.peek());
+                eval.pop();
+                proxNmr = Double.parseDouble(eval.peek());
+                eval.pop();
+
+                switch (nmr)
+                {
+                    case "+":
+                    	resultado = proxNmr + nmrPrincipal;
+                        break;
+                    case "-":
+                    	resultado = proxNmr - nmrPrincipal;
+                        break;
+                    case "*":
+                    	resultado = proxNmr * nmrPrincipal;
+                        break;
+                    case "/":
+                        
+                        if (nmrPrincipal == 0)
+                        {
+                            System.out.println("\nERROR: Cannot Divide by zero!\n");
+                            return;
+                        } else
+                        {
+                        	resultado = proxNmr / nmrPrincipal;
+                            break;
+                        }
+                    case "%":
+                    	resultado = proxNmr % nmrPrincipal;
+                        break;
+                    case "^":
+                    	resultado = Math.pow(proxNmr, nmrPrincipal);
+                        break;
+
+                }
+
+                eval.push(resultado.toString());
+
+            }
+
+        }
+        
+        System.out.println("\nRESULT is: ");
+        DecimalFormat fd = new DecimalFormat("0.000");
+        for (String val : eval)
+        {
+            System.out.println(fd.format(Double.parseDouble(val)) + "\n");
+        }
+    }
+
+}
